@@ -1,68 +1,46 @@
 import pandas as pd
+from sklearn.model_selection import train_test_split
+import numpy as np
+
+def clean_data(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+
+    df = df.drop(columns=["first", "last", "street", "trans_num"], errors="ignore")
+
+    df["trans_date_trans_time"] = pd.to_datetime(df["trans_date_trans_time"])
+
+    df["hour"] = df["trans_date_trans_time"].dt.hour
+    df["day"] = df["trans_date_trans_time"].dt.day
+    df["month"] = df["trans_date_trans_time"].dt.month
+    df["year"] = df["trans_date_trans_time"].dt.year
+
+    return df
 
 
-def _is_true(x: pd.Series) -> pd.Series:
-    return x == "t"
+def create_features(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+
+    df["dob"] = pd.to_datetime(df["dob"])
+    df["age"] = 2025 - df["dob"].dt.year
+
+    df["amt_log"] = df["amt"].apply(lambda x: 0 if x <= 0 else np.log(x))
+
+    return df
 
 
-def _parse_percentage(x: pd.Series) -> pd.Series:
-    x = x.str.replace("%", "")
-    x = x.astype(float) / 100
-    return x
+def split_data(df: pd.DataFrame):
 
+    df = df.sort_values("trans_date_trans_time")
 
-def _parse_money(x: pd.Series) -> pd.Series:
-    x = x.str.replace("$", "").str.replace(",", "")
-    x = x.astype(float)
-    return x
+    train_size = int(len(df) * 0.8)
 
+    train = df.iloc[:train_size]
+    test = df.iloc[train_size:]
 
-def preprocess_companies(companies: pd.DataFrame) -> pd.DataFrame:
-    """Preprocesses the data for companies.
+    X_train = train.drop(columns=["is_fraud"])
+    y_train = train["is_fraud"]
 
-    Args:
-        companies: Raw data.
-    Returns:
-        Preprocessed data, with `company_rating` converted to a float and
-        `iata_approved` converted to boolean.
-    """
-    companies["iata_approved"] = _is_true(companies["iata_approved"])
-    companies["company_rating"] = _parse_percentage(companies["company_rating"])
-    return companies
+    X_test = test.drop(columns=["is_fraud"])
+    y_test = test["is_fraud"]
 
-
-def preprocess_shuttles(shuttles: pd.DataFrame) -> pd.DataFrame:
-    """Preprocesses the data for shuttles.
-
-    Args:
-        shuttles: Raw data.
-    Returns:
-        Preprocessed data, with `price` converted to a float and `d_check_complete`,
-        `moon_clearance_complete` converted to boolean.
-    """
-    shuttles["d_check_complete"] = _is_true(shuttles["d_check_complete"])
-    shuttles["moon_clearance_complete"] = _is_true(shuttles["moon_clearance_complete"])
-    shuttles["price"] = _parse_money(shuttles["price"])
-    return shuttles
-
-
-def create_model_input_table(
-    shuttles: pd.DataFrame, companies: pd.DataFrame, reviews: pd.DataFrame
-) -> pd.DataFrame:
-    """Combines all data to create a model input table.
-
-    Args:
-        shuttles: Preprocessed data for shuttles.
-        companies: Preprocessed data for companies.
-        reviews: Raw data for reviews.
-    Returns:
-        Model input table.
-
-    """
-    rated_shuttles = shuttles.merge(reviews, left_on="id", right_on="shuttle_id")
-    rated_shuttles = rated_shuttles.drop("id", axis=1)
-    model_input_table = rated_shuttles.merge(
-        companies, left_on="company_id", right_on="id"
-    )
-    model_input_table = model_input_table.dropna()
-    return model_input_table
+    return X_train, X_test, y_train, y_test

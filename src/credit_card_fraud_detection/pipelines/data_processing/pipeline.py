@@ -1,28 +1,26 @@
 from kedro.pipeline import Node, Pipeline
-
-from .nodes import create_model_input_table, preprocess_companies, preprocess_shuttles
-
+from .nodes import clean_data, create_features, split_data
 
 def create_pipeline(**kwargs) -> Pipeline:
     return Pipeline(
         [
             Node(
-                func=preprocess_companies,
-                inputs="companies",
-                outputs="preprocessed_companies",
-                name="preprocess_companies_node",
+                func=clean_data,
+                inputs="fraud_raw",
+                outputs="fraud_processed",
+                name="clean_data_node",
             ),
             Node(
-                func=preprocess_shuttles,
-                inputs="shuttles",
-                outputs="preprocessed_shuttles",
-                name="preprocess_shuttles_node",
+                func=create_features,
+                inputs="fraud_processed",
+                outputs="fraud_features",
+                name="feature_engineering_node",
             ),
             Node(
-                func=create_model_input_table,
-                inputs=["preprocessed_shuttles", "preprocessed_companies", "reviews"],
-                outputs="model_input_table",
-                name="create_model_input_table_node",
+                func=split_data,
+                inputs="fraud_features",
+                outputs=["X_train", "X_test", "y_train", "y_test"],
+                name="split_data_node",
             ),
         ]
     )

@@ -1,57 +1,76 @@
-import logging
-
 import pandas as pd
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import max_error, mean_absolute_error, r2_score
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import numpy as np
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LogisticRegression
+import mlflow
+import mlflow.sklearn
+from sklearn.metrics import accuracy_score, roc_auc_score
 
 
-def split_data(data: pd.DataFrame, parameters: dict) -> tuple:
-    """Splits data into features and targets training and test sets.
+def prepare_features(X_train: pd.DataFrame, X_test: pd.DataFrame):
 
-    Args:
-        data: Data containing features and target.
-        parameters: Parameters defined in parameters/data_science.yml.
-    Returns:
-        Split data.
-    """
-    X = data[parameters["features"]]
-    y = data["price"]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=parameters["test_size"], random_state=parameters["random_state"]
+    # ----- FEATURE ENGINEERING -----
+    for df in [X_train, X_test]:
+        df["year"] = df["trans_date_trans_time"].dt.year
+        df["month"] = df["trans_date_trans_time"].dt.month
+        df["day"] = df["trans_date_trans_time"].dt.day
+        df["hour"] = df["trans_date_trans_time"].dt.hour
+
+    # Convert DOB to age if exists
+    if "dob" in X_train.columns:
+        for df in [X_train, X_test]:
+            df["age"] = 2026 - df["dob"].dt.year
+
+    # Drop raw date columns
+    drop_cols = ["trans_date_trans_time", "dob",
+                 "first", "last", "street", "city"]  # drop high-cardinality text
+
+    X_train = X_train.drop(columns=[c for c in drop_cols if c in X_train.columns])
+    X_test = X_test.drop(columns=[c for c in drop_cols if c in X_test.columns])
+
+    # ----- DEFINE COLUMNS PROPERLY -----
+    categorical_cols = ["merchant", "category", "gender", "job", "state"]
+
+    numeric_cols = [
+        col for col in X_train.columns
+        if col not in categorical_cols
+    ]
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            (
+                "cat",
+                OneHotEncoder(handle_unknown="ignore"),
+                categorical_cols,
+            ),
+            (
+                "num",
+                "passthrough",
+                numeric_cols,
+            ),
+        ]
     )
-    return X_train, X_test, y_train, y_test
+
+    X_train_encoded = preprocessor.fit_transform(X_train)
+    X_test_encoded = preprocessor.transform(X_test)
+
+    return X_train_encoded, X_test_encoded
 
 
-def train_model(X_train: pd.DataFrame, y_train: pd.Series) -> LinearRegression:
-    """Trains the linear regression model.
 
-    Args:
-        X_train: Training data of independent features.
-        y_train: Training data for price.
+def train_model(X_train, y_train):
 
-    Returns:
-        Trained model.
-    """
-    regressor = LinearRegression()
-    regressor.fit(X_train, y_train)
-    return regressor
+    model = LogisticRegression(max_iter=1000, class_weight="balanced")
+    model.fit(X_train, y_train)
+
+    return model
 
 
-def evaluate_model(
-    regressor: LinearRegression, X_test: pd.DataFrame, y_test: pd.Series
-) -> dict[str, float]:
-    """Calculates and logs the coefficient of determination.
-
-    Args:
-        regressor: Trained model.
-        X_test: Testing data of independent features.
-        y_test: Testing data for price.
-    """
-    y_pred = regressor.predict(X_test)
-    score = r2_score(y_test, y_pred)
-    mae = mean_absolute_error(y_test, y_pred)
-    me = max_error(y_test, y_pred)
-    logger = logging.getLogger(__name__)
-    logger.info("Model has a coefficient R^2 of %.3f on test data.", score)
-    return {"r2_score": score, "mae": mae, "max_error": me}
+def evaluate_model(model, X_test, y_test):
+    preds = model.predict(X_test)
+    report = classification_report(y_test, preds, output_dict=True)
+    return report

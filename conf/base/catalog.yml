@@ -39,58 +39,117 @@
 # (transcoding), templating and a way to reuse arguments that are frequently repeated. See more here:
 # https://docs.kedro.org/en/stable/data/data_catalog.html
 
-companies:
+# companies:
+#   type: pandas.CSVDataset
+#   filepath: data/01_raw/companies.csv
+
+# reviews:
+#   type: pandas.CSVDataset
+#   filepath: data/01_raw/reviews.csv
+
+# shuttles:
+#   type: pandas.ExcelDataset
+#   filepath: data/01_raw/shuttles.xlsx
+#   load_args:
+#     engine: openpyxl
+
+# preprocessed_companies:
+#   type: pandas.ParquetDataset
+#   filepath: data/02_intermediate/preprocessed_companies.parquet
+
+# preprocessed_shuttles:
+#   type: pandas.ParquetDataset
+#   filepath: data/02_intermediate/preprocessed_shuttles.parquet
+
+# model_input_table:
+#   type: pandas.ParquetDataset
+#   filepath: data/03_primary/model_input_table.parquet
+
+# regressor:
+#   type: pickle.PickleDataset
+#   filepath: data/06_models/regressor.pickle
+#   versioned: true
+
+# shuttle_passenger_capacity_plot_exp:
+#   type: plotly.PlotlyDataset
+#   filepath: data/08_reporting/shuttle_passenger_capacity_plot_exp.json
+#   versioned: true
+#   plotly_args:
+#     type: bar
+#     fig:
+#       x: shuttle_type
+#       y: passenger_capacity
+#       orientation: h
+#     layout:
+#       xaxis_title: Shuttles
+#       yaxis_title: Average passenger capacity
+#       title: Shuttle Passenger capacity
+
+# shuttle_passenger_capacity_plot_go:
+#   type: plotly.JSONDataset
+#   filepath: data/08_reporting/shuttle_passenger_capacity_plot_go.json
+#   versioned: true
+
+# dummy_confusion_matrix:
+#   type: matplotlib.MatplotlibDataset
+#   filepath: data/08_reporting/dummy_confusion_matrix.png
+#   versioned: true
+
+
+fraud_raw:
   type: pandas.CSVDataset
-  filepath: data/01_raw/companies.csv
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/raw/fraudTrain.csv
+  credentials: aws_credentials
 
-reviews:
+fraud_processed:
+  type: pandas.ParquetDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/fraud_processed.parquet
+  credentials: aws_credentials
+
+fraud_features:
+  type: pandas.ParquetDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/fraud_features.parquet
+  credentials: aws_credentials
+
+X_train:
+  type: pandas.ParquetDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/X_train.parquet
+  credentials: aws_credentials
+
+X_test:
+  type: pandas.ParquetDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/X_test.parquet
+  credentials: aws_credentials
+
+y_train:
   type: pandas.CSVDataset
-  filepath: data/01_raw/reviews.csv
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/y_train.parquet
+  credentials: aws_credentials
 
-shuttles:
-  type: pandas.ExcelDataset
-  filepath: data/01_raw/shuttles.xlsx
-  load_args:
-    engine: openpyxl
+y_test:
+  type: pandas.CSVDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/y_test.parquet
+  credentials: aws_credentials
 
-preprocessed_companies:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/preprocessed_companies.parquet
 
-preprocessed_shuttles:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/preprocessed_shuttles.parquet
-
-model_input_table:
-  type: pandas.ParquetDataset
-  filepath: data/03_primary/model_input_table.parquet
-
-regressor:
+model:
   type: pickle.PickleDataset
-  filepath: data/06_models/regressor.pickle
-  versioned: true
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/models/model.pkl
+  credentials: aws_credentials
 
-shuttle_passenger_capacity_plot_exp:
-  type: plotly.PlotlyDataset
-  filepath: data/08_reporting/shuttle_passenger_capacity_plot_exp.json
-  versioned: true
-  plotly_args:
-    type: bar
-    fig:
-      x: shuttle_type
-      y: passenger_capacity
-      orientation: h
-    layout:
-      xaxis_title: Shuttles
-      yaxis_title: Average passenger capacity
-      title: Shuttle Passenger capacity
+model_metrics:
+  type: json.JSONDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/reporting/model_metrics.json
+  credentials: aws_credentials
 
-shuttle_passenger_capacity_plot_go:
-  type: plotly.JSONDataset
-  filepath: data/08_reporting/shuttle_passenger_capacity_plot_go.json
-  versioned: true
 
-dummy_confusion_matrix:
-  type: matplotlib.MatplotlibDataset
-  filepath: data/08_reporting/dummy_confusion_matrix.png
-  versioned: true
+X_train_encoded:
+  type: pickle.PickleDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/X_train_encoded.pkl
+  credentials: aws_credentials
+
+
+X_test_encoded:
+  type: pickle.PickleDataset
+  filepath: s3://vrahulds-personal-projects/credit-card-fraud-detection/intermediate/X_test_encoded.pkl
+  credentials: aws_credentials
